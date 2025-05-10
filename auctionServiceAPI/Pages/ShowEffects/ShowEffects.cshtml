@@ -1,0 +1,162 @@
+@page "/auction/details/{id:guid}"
+@model auctionServiceAPI.Pages.ShowEffects.ShowEffectsModel
+@{
+    ViewData["Title"] = Model.HasError ? "Fejl" : Model.Auction.AuctionTitle;
+}
+<head>
+    <link rel="stylesheet" href="/css/ShowEffects.css">
+</head>
+<main class="container">
+    @if (Model.HasError)
+    {
+        <div class="error-container">
+            <svg viewBox="0 0 24 24" width="48" height="48">
+                <path d="M11 15h2v2h-2zm0-8h2v6h-2zm.99-5C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8z" fill="var(--gold-color)"/>
+            </svg>
+            <h2>Der opstod en fejl</h2>
+            <p>@Model.ErrorMessage</p>
+            <a href="/auction/upcoming" class="btn auction-btn">
+                <svg viewBox="0 0 24 24" width="16" height="16">
+                    <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z" fill="currentColor"/>
+                </svg>
+                Tilbage til auktioner
+            </a>
+        </div>
+    }
+    else
+    {
+        <section class="auction-details">
+            <div class="auction-header">
+                <h1>@Model.Auction.AuctionTitle</h1>
+                <a href="/auction/upcoming" class="back-link">
+                    <svg viewBox="0 0 24 24" width="24" height="24">
+                        <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z" fill="currentColor"/>
+                    </svg>
+                    Tilbage til auktioner
+                </a>
+            </div>
+
+            <div class="auction-meta">
+                <div class="auction-image" style="background-image: url('@Model.Auction.Image')">
+                    <div class="auction-category">@Model.Auction.Category</div>
+                </div>
+                <div class="auction-info">
+                    <div class="info-item">
+                        <svg viewBox="0 0 24 24" width="18" height="18">
+                            <path d="M9 11H7v2h2v-2zm4 0h-2v2h2v-2zm4 0h-2v2h2v-2zm2-7h-1V2h-2v2H8V2H6v2H5c-1.11 0-1.99.9-1.99 2L3 20c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V9h14v11z" fill="currentColor"/>
+                        </svg>
+                        <strong>Startdato:</strong> @Model.Auction.StartDate.ToString("d. MMMM yyyy")
+                    </div>
+                    <div class="info-item">
+                        <svg viewBox="0 0 24 24" width="18" height="18">
+                            <path d="M9 11H7v2h2v-2zm4 0h-2v2h2v-2zm4 0h-2v2h2v-2zm2-7h-1V2h-2v2H8V2H6v2H5c-1.11 0-1.99.9-1.99 2L3 20c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V9h14v11z" fill="currentColor"/>
+                        </svg>
+                        <strong>Slutdato:</strong> @Model.Auction.EndDate.ToString("d. MMMM yyyy")
+                    </div>
+                    <div class="info-item">
+                        <svg viewBox="0 0 24 24" width="18" height="18">
+                            <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" fill="currentColor"/>
+                        </svg>
+                        <strong>Lokation:</strong> @Model.Auction.Location
+                    </div>
+                    <div class="info-item">
+                        <svg viewBox="0 0 24 24" width="18" height="18">
+                            <path d="M3 13h2v-2H3v2zm0 4h2v-2H3v2zm0-8h2V7H3v2zm4 4h14v-2H7v2zm0 4h14v-2H7v2zM7 7v2h14V7H7z" fill="currentColor"/>
+                        </svg>
+                        <strong>Antal effekter:</strong> @Model.Auction.Effects.Count
+                    </div>
+                    <div class="auction-description">
+                        <p>@Model.Auction.Description</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="effects-list">
+            <h2>
+                <svg viewBox="0 0 24 24" width="24" height="24">
+                    <path d="M20 4H4c-1.11 0-1.99.89-1.99 2L2 18c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V6c0-1.11-.89-2-2-2zm0 14H4v-6h16v6zm0-10H4V6h16v2z" fill="var(--gold-color)"/>
+                </svg>
+                Effekter i denne auktion
+            </h2>
+
+            @if (Model.Auction.Effects.Count == 0)
+            {
+                <div class="no-effects">
+                    <svg viewBox="0 0 24 24" width="48" height="48">
+                        <path d="M20 6h-8l-2-2H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm0 12H4V8h16v10z" fill="var(--gold-color)"/>
+                    </svg>
+                    <p>Der er endnu ikke tilføjet effekter til denne auktion.</p>
+                </div>
+            }
+            else
+            {
+                <div class="effects-grid">
+                    @foreach (var effect in Model.Auction.Effects)
+                    {
+                        <div class="effect-card">
+                            @if (!string.IsNullOrEmpty(effect.Picture))
+                            {
+                                <div class="effect-image" style="background-image: url('@effect.Picture')">
+                                    <div class="effect-category">@effect.Category</div>
+                                </div>
+                            }
+                            <div class="effect-content">
+                                <h3>@effect.Title</h3>
+                                <p class="effect-description">@effect.Description</p>
+                                <div class="effect-details">
+                                    <div class="category">
+                                        <svg viewBox="0 0 24 24" width="16" height="16">
+                                            <path d="M17.63 5.84C17.27 5.33 16.67 5 16 5L5 5.01C3.9 5.01 3 5.9 3 7v10c0 1.1.9 1.99 2 1.99L16 19c.67 0 1.27-.33 1.63-.84L22 12l-4.37-6.16z" fill="currentColor"/>
+                                        </svg>
+                                        <strong>Kategori:</strong> @effect.Category
+                                    </div>
+                                    <div class="price">
+                                        <svg viewBox="0 0 24 24" width="16" height="16">
+                                            <path d="M11.8 10.9c-2.27-.59-3-1.2-3-2.15 0-1.09 1.01-1.85 2.7-1.85 1.78 0 2.44.85 2.5 2.1h2.21c-.07-1.72-1.12-3.3-3.21-3.81V3h-3v2.16c-1.94.42-3.5 1.68-3.5 3.61 0 2.31 1.91 3.46 4.7 4.13 2.5.6 3 1.48 3 2.41 0 .69-.49 1.79-2.7 1.79-2.06 0-2.87-.92-2.98-2.1h-2.2c.12 2.19 1.76 3.42 3.68 3.83V21h3v-2.15c1.95-.37 3.5-1.5 3.5-3.55 0-2.84-2.43-3.81-4.7-4.4z" fill="currentColor"/>
+                                        </svg>
+                                        <strong>Minimumspris:</strong> @effect.MinimumPrice.ToString("N0") kr.
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+        </section>
+
+        <section class="auction-info">
+            <div class="info-container">
+                <div class="info-card">
+                    <div class="info-icon">
+                        <svg viewBox="0 0 24 24" width="40" height="40">
+                            <path d="M14 12c0-1.1-.9-2-2-2s-2 .9-2 2 .9 2 2 2 2-.9 2-2zm-2-9c-4.97 0-9 4.03-9 9H0l4 4 4-4H5c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7c-1.51 0-2.91-.49-4.06-1.3l-1.42 1.44C8.04 20.3 9.94 21 12 21c4.97 0 9-4.03 9-9s-4.03-9-9-9z" fill="var(--gold-color)"/>
+                        </svg>
+                    </div>
+                    <h3>Sådan Byder Du</h3>
+                    <p>Du kan byde på auktionens effekter både online og via vores app. Registrer dig som bruger for at afgive bud, og husk at sætte dig grundigt ind i genstandens stand før budgivning.</p>
+                </div>
+
+                <div class="info-card">
+                    <div class="info-icon">
+                        <svg viewBox="0 0 24 24" width="40" height="40">
+                            <path d="M4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm16-4H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-1 9h-4v4h-2v-4H9V9h4V5h2v4h4v2z" fill="var(--gold-color)"/>
+                        </svg>
+                    </div>
+                    <h3>Eftersyn</h3>
+                    <p>Vi afholder eftersyn 2-3 dage inden auktionen. Her har du mulighed for at se og inspicere alle effekter, samt få rådgivning fra vores eksperter. Eftersyn foregår på auktionsadressen.</p>
+                </div>
+
+                <div class="info-card">
+                    <div class="info-icon">
+                        <svg viewBox="0 0 24 24" width="40" height="40">
+                            <path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zM9 6c0-1.66 1.34-3 3-3s3 1.34 3 3v2H9V6zm9 14H6V10h12v10zm-6-3c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2z" fill="var(--gold-color)"/>
+                        </svg>
+                    </div>
+                    <h3>Betaling & Afhentning</h3>
+                    <p>Efter auktionen skal varer betales inden for 5 dage. Vi accepterer alle gængse betalingsmetoder. Afhentning af købte effekter skal ske senest 10 dage efter auktionens afslutning.</p>
+                </div>
+            </div>
+        </section>
+    }
+</main>
