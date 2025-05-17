@@ -1,0 +1,155 @@
+@page "/auction/details/{auctionId:guid}"
+@model auctionServiceAPI.Pages.Auctions.ShowEffectsModel
+@using System.Globalization
+@{
+    ViewData["Title"] = $"{Model.Auction.AuctionTitle} - Auktionshuset Grøn og Olsen";
+}
+
+<head>
+    <link rel="stylesheet" href="/css/AuctionDetails.css">
+</head>
+
+<main class="auction-details-page">
+    <div class="auction-container">
+        @if (Model.HasError)
+        {
+            <div class="error-message">
+                <h2>Fejl</h2>
+                <p>@Model.ErrorMessage</p>
+                <a href="/auction/upcoming" class="btn">Tilbage til auktioner</a>
+            </div>
+        }
+        else
+        {
+            <div class="auction-header">
+                <a href="/auction/upcoming" class="back-link">
+                    <svg viewBox="0 0 24 24" width="24" height="24">
+                        <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z" fill="currentColor"/>
+                    </svg>
+                    Tilbage til auktioner
+                </a>
+                <div class="auction-category">@Model.Auction.Category</div>
+            </div>
+
+            <div class="auction-content">
+                <div class="auction-image-gallery">
+                    <div class="main-image" style="background-image: url('@(string.IsNullOrEmpty(Model.Auction.Image) ? "/images/placeholder.jpg" : Model.Auction.Image)')"></div>
+                </div>
+
+                <div class="auction-info">
+                    <h1>@Model.Auction.AuctionTitle</h1>
+                    
+                    <div class="auction-meta">
+                        <div class="auction-location">
+                            <svg viewBox="0 0 24 24" width="16" height="16">
+                                <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" fill="currentColor"/>
+                            </svg>
+                            @Model.Auction.Location
+                        </div>
+                        
+                        <div class="auction-dates">
+                            <div class="start-date">
+                                <span>Start:</span> @Model.Auction.StartDate.ToString("dd/MM/yyyy HH:mm")
+                            </div>
+                            <div class="end-date">
+                                <span>Slut:</span> @Model.Auction.EndDate.ToString("dd/MM/yyyy HH:mm")
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="auction-description">
+                        <h3>Beskrivelse</h3>
+                        <p>@Model.Auction.Description</p>
+                    </div>
+                    
+                    <div class="bid-section">
+                        <div class="current-price">
+                            <h3>Nuværende højeste bud</h3>
+                            <div class="price">@Model.CurrentBid.ToString("C0", new CultureInfo("da-DK"))</div>
+                            <div class="min-bid">Minimumsbud: @Model.MinimumBid.ToString("C0", new CultureInfo("da-DK"))</div>
+                        </div>
+                        
+                        <div class="bid-form">
+                            <h3>Afgiv dit bud</h3>
+                            <div id="bidForm">
+                                <div class="bid-input">
+                                    <input type="number" id="bidAmount" min="@Model.MinimumBid" step="100" value="@Model.MinimumBid">
+                                    <span class="currency">kr.</span>
+                                </div>
+                                <button type="button" id="placeBidBtn" class="bid-btn">Afgiv bud</button>
+                            </div>
+                            <div id="bidMessage" class="bid-message"></div>
+                        </div>
+                    </div>
+                    
+                    <div class="bid-history">
+                        <h3>Budhistorik</h3>
+                        @if (Model.Auction.Bids.Count == 0)
+                        {
+                            <p>Ingen bud endnu. Vær den første til at byde!</p>
+                        }
+                        else
+                        {
+                            <ul class="bids-list">
+                                @foreach (var bid in Model.Auction.Bids.OrderByDescending(b => b.Timestamp))
+                                {
+                                    <li>
+                                        <div class="bid-amount">@bid.Amount.ToString("C0", new CultureInfo("da-DK"))</div>
+                                        <div class="bid-time">@bid.Timestamp.ToString("dd/MM/yyyy HH:mm")</div>
+                                    </li>
+                                }
+                            </ul>
+                        }
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+</main>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const bidBtn = document.getElementById('placeBidBtn');
+    const bidAmount = document.getElementById('bidAmount');
+    const bidMessage = document.getElementById('bidMessage');
+    const auctionId = '@Model.Auction.AuctionId';
+    
+    bidBtn.addEventListener('click', async function() {
+        const amount = Number(bidAmount.value);
+        
+        if (isNaN(amount) || amount < @Model.MinimumBid) {
+            bidMessage.innerHTML = `<div class="error">Budet skal være mindst ${@Model.MinimumBid} kr.</div>`;
+            return;
+        }
+        
+        bidMessage.innerHTML = '<div class="loading">Sender dit bud...</div>';
+        
+        try {
+            const response = await fetch('/api/bid', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    auctionId: auctionId,
+                    amount: amount
+                })
+            });
+            
+            const result = await response.json();
+            
+            if (response.ok) {
+                bidMessage.innerHTML = '<div class="success">Dit bud er afgivet!</div>';
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1500);
+            } else {
+                bidMessage.innerHTML = `<div class="error">${result.message || 'Der opstod en fejl'}</div>`;
+            }
+        } catch (error) {
+            bidMessage.innerHTML = '<div class="error">Der opstod en fejl. Prøv igen senere.</div>';
+            console.error('Bid error:', error);
+        }
+    });
+});
+</script>

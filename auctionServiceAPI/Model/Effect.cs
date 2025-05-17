@@ -13,7 +13,7 @@ public class Effect
     public string Description { get; set; }
     public string Category { get; set; }
     public decimal MinimumPrice { get; set; }
-    public string Picture { get; set; }
+    public string? Image { get; set; }
     public Guid SellerId { get; set; }
     public Guid BuyerId { get; set; }
     public Guid BidId { get; set; }

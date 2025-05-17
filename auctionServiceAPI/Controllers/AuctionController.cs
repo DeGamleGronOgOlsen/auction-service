@@ -1,97 +1,184 @@
-﻿using Microsoft.AspNetCore.Http.Features;
-using Microsoft.AspNetCore.Mvc;
-using auctionServiceAPI.Model;
+﻿using auctionServiceAPI.Model;
 using auctionServiceAPI.Services;
+using Microsoft.AspNetCore.Mvc;
 
-namespace auctionServiceAPI.Controllers;
 
-/// <summary>
-/// The AuctionController implements the HTTP interface for accessing
-/// auctions and their related effects.
-/// </summary>
-[ApiController]
-[Route("[controller]")]
-public class AuctionController : ControllerBase
+namespace auctionServiceAPI.Controllers
 {
-    private readonly ILogger<AuctionController> _logger;
-    private readonly IAuctionService _dbService;
-
-    /// <summary>
-    /// Create an instance of the Auction controller.
-    /// </summary>
-    /// <param name="logger">Global logging instance</param>
-    /// <param name="dbService">Database repository</param>
-    public AuctionController(ILogger<AuctionController> logger, IAuctionService dbService)
+    [Route("[controller]")]
+    [ApiController]
+    public class AuctionController : ControllerBase
     {
-        _logger = logger;
-        _dbService = dbService;
-    }
+        private readonly ILogger<AuctionController> _logger;
+        private readonly IAuctionService _dbService;
+        private readonly IConfiguration _configuration;
+        private readonly string _serviceIp;
 
-    /// <summary>
-    /// Service version endpoint.
-    /// Fetches metadata information, through reflection from the service assembly.
-    /// </summary>
-    /// <returns>All metadata attributes from assembly in text string</returns>
-    [HttpGet("version")]
-    public Dictionary<string, string> GetVersion()
-    {
-        var properties = new Dictionary<string, string>();
-        var assembly = typeof(Program).Assembly;
-
-        properties.Add("service", "Auction");
-        var ver = System.Diagnostics.FileVersionInfo.GetVersionInfo(typeof(Program).Assembly.Location).ProductVersion ?? "Undefined";
-        properties.Add("version", ver);
-
-        var feature = HttpContext.Features.Get<IHttpConnectionFeature>();
-        var localIPAddr = feature?.LocalIpAddress?.ToString() ?? "N/A";
-        properties.Add("local-host-address", localIPAddr);
-
-        return properties;
-    }
-    
-    [HttpGet("GetAllAuctions")]
-    public async Task<IEnumerable<Auction>> GetAllAuctions()
-    {
-        _logger.LogInformation("Request for all auctions");
-        return await _dbService.GetAllAuctions();
-    }
-
-    [HttpGet("GetAuctionById")]
-    public async Task<Auction?> GetAuction(Guid auctionId)
-    {
-        _logger.LogInformation($"Request for auction with guid: {auctionId}");
-        return await _dbService.GetAuction(auctionId);
-    }
-
-    [HttpGet("GetAuctionsByCategory")]
-    public async Task<IEnumerable<Auction>?> GetAuctionsByCategory(string category)
-    {
-        _logger.LogInformation($"Request for auctions in category: {category}");
-        return await _dbService.GetAuctionsByCategory(category);
-    }
-
-    [HttpPost("CreateAuction")]
-    public Task<Guid?> CreateAuction(Auction auction)
-    {
-        return _dbService.AddAuction(auction);
-    }
-
-    [HttpPost("AddEffectToAuction")]
-    public async Task<IActionResult> AddEffectToAuction(Guid auctionId, Effect effect)
-    {
-        try
+        public AuctionController(ILogger<AuctionController> logger, IAuctionService dbService, IConfiguration configuration)
         {
-            var modifiedCount = await _dbService.AddEffectToAuction(auctionId, effect);
-            if (modifiedCount > 0)
-            {
-                return Ok("Effect added to auction successfully.");
-            }
-            return NotFound("Auction not found.");
+            _logger = logger;
+            _dbService = dbService;
+            _configuration = configuration;
+
+            // Get and log the service IP address
+            var hostName = System.Net.Dns.GetHostName();
+            var ips = System.Net.Dns.GetHostAddresses(hostName);
+            _serviceIp = ips.First().MapToIPv4().ToString();
+            _logger.LogInformation(1, $"Auction Service responding from {_serviceIp}");
         }
-        catch (Exception ex)
+
+        [HttpGet]
+        public async Task<ActionResult<IEnumerable<Auction>>> GetAllAuctions()
         {
-            _logger.LogError("Error adding effect to auction: {Error}", ex.Message);
-            return StatusCode(500, "Internal server error.");
+            _logger.LogInformation($"Getting all auctions from {_serviceIp}");
+            var auctions = await _dbService.GetAllAuctionsAsync();
+            return Ok(auctions);
+        }
+
+        [HttpGet("{id}")]
+        public async Task<ActionResult<Auction>> GetAuction(Guid id)
+        {
+            _logger.LogInformation($"Getting auction {id} from {_serviceIp}");
+            var auction = await _dbService.GetAuctionAsync(id);
+            
+            if (auction == null)
+            {
+                _logger.LogWarning($"Auction {id} not found");
+                return NotFound();
+            }
+            
+            return Ok(auction);
+        }
+
+        [HttpPost]
+        public async Task<ActionResult<Auction>> CreateAuction([FromForm] Auction auction, IFormFile? imageFile)
+        {
+            _logger.LogInformation($"Creating new auction from {_serviceIp}");
+
+            try
+            {
+                // Validate auction data
+                if (string.IsNullOrWhiteSpace(auction.AuctionTitle) || auction.StartDate == default ||
+                    auction.EndDate == default)
+                {
+                    return BadRequest("Auction title, start date, and end date are required.");
+                }
+
+                if (auction.StartDate >= auction.EndDate)
+                {
+                    return BadRequest("Start date must be earlier than end date.");
+                }
+
+                if (auction.AuctionId == Guid.Empty)
+                {
+                    auction.AuctionId = Guid.NewGuid();
+                }
+
+                // Handle image upload if a file is provided
+                if (imageFile != null && imageFile.Length > 0)
+                {
+                    try
+                    {
+                        string imagePath = _configuration["ImagePath"] ?? "/srv/resources/images";
+                        Directory.CreateDirectory(imagePath);
+
+                        string fileName = $"{auction.AuctionId}{Path.GetExtension(imageFile.FileName)}";
+                        string filePath = Path.Combine(imagePath, fileName);
+
+                        using (var stream = new FileStream(filePath, FileMode.Create))
+                        {
+                            await imageFile.CopyToAsync(stream);
+                        }
+
+                        auction.Image = $"/images/{fileName}";
+                        _logger.LogInformation($"Image uploaded for auction {auction.AuctionId}: {auction.Image}");
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Error uploading image.");
+                        return StatusCode(500, "An error occurred while uploading the image.");
+                    }
+                }
+
+                await _dbService.CreateAuctionAsync(auction);
+                return CreatedAtAction(nameof(GetAuction), new { id = auction.AuctionId }, auction);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error creating auction.");
+                return StatusCode(500, "An error occurred while creating the auction.");
+            }
+        }
+
+        [HttpPut("{id}")]
+        public async Task<IActionResult> UpdateAuction(Guid id, Auction auction)
+        {
+            _logger.LogInformation($"Updating auction {id} from {_serviceIp}");
+            
+            if (id != auction.AuctionId)
+            {
+                return BadRequest();
+            }
+            
+            var existingAuction = await _dbService.GetAuctionAsync(id);
+            if (existingAuction == null)
+            {
+                return NotFound();
+            }
+            
+            await _dbService.UpdateAuctionAsync(auction);
+            return NoContent();
+        }
+
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> DeleteAuction(Guid id)
+        {
+            _logger.LogInformation($"Deleting auction {id} from {_serviceIp}");
+            
+            var auction = await _dbService.GetAuctionAsync(id);
+            if (auction == null)
+            {
+                return NotFound();
+            }
+            
+            await _dbService.DeleteAuctionAsync(id);
+            return NoContent();
+        }
+
+        [HttpPost("{id}/bid")]
+        public async Task<IActionResult> AddBid(Guid id, Bid bid)
+        {
+            _logger.LogInformation($"Adding bid to auction {id} from {_serviceIp}");
+            
+            var auction = await _dbService.GetAuctionAsync(id);
+            if (auction == null)
+            {
+                return NotFound();
+            }
+            
+            if (bid.BidId == Guid.Empty)
+            {
+                bid.BidId = Guid.NewGuid();
+            }
+            
+            bid.AuctionId = id;
+            bid.Timestamp = DateTime.UtcNow;
+            
+            // Check if bid is valid (above minimum price and highest current bid)
+            if (auction.Bids.Count > 0 && bid.Amount <= auction.Bids.Max(b => b.Amount))
+            {
+                return BadRequest("Bid must be higher than current highest bid");
+            }
+            
+            if (bid.Amount < auction.StartingPrice)
+            {
+                return BadRequest("Bid must be at least the starting price");
+            }
+            
+            auction.Bids.Add(bid);
+            await _dbService.UpdateAuctionAsync(auction);
+            
+            return Ok(bid);
         }
     }
 }

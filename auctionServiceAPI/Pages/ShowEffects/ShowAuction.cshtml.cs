@@ -1,9 +1,9 @@
+using auctionServiceAPI.Model;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
-using auctionServiceAPI.Model;
 using System.Net.Http.Json;
 
-namespace auctionServiceAPI.Pages.ShowEffects
+namespace auctionServiceAPI.Pages.Auctions
 {
     public class ShowEffectsModel : PageModel
     {
@@ -16,34 +16,45 @@ namespace auctionServiceAPI.Pages.ShowEffects
             _logger = logger;
         }
 
+        [BindProperty(SupportsGet = true)]
+        public Guid AuctionId { get; set; }
+
         public Auction Auction { get; set; }
+        public decimal CurrentBid { get; set; }
+        public decimal MinimumBid { get; set; }
         public bool HasError { get; set; }
         public string ErrorMessage { get; set; }
 
-        public async Task<IActionResult> OnGetAsync(Guid id)
+        public async Task<IActionResult> OnGetAsync()
         {
             try
             {
                 using HttpClient client = _clientFactory.CreateClient("gateway");
-                // Make sure the URL is properly formatted with a leading slash if needed
-                Auction = await client.GetFromJsonAsync<Auction>($"auction/GetAuctionById?auctionId={id}");
-
+                Auction = await client.GetFromJsonAsync<Auction>($"auction/{AuctionId}");
+                
                 if (Auction == null)
                 {
                     HasError = true;
-                    ErrorMessage = "Kunne ikke finde auktionen";
+                    ErrorMessage = "Auktionen kunne ikke findes";
                     return Page();
                 }
 
-                return Page();
+                // Calculate current bid and minimum next bid
+                CurrentBid = Auction.Bids.Count > 0 
+                    ? Auction.Bids.Max(b => b.Amount) 
+                    : Auction.StartingPrice;
+                
+                // Set minimum bid to current bid + 100 kr or starting price if no bids
+                MinimumBid = CurrentBid + 100;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Fejl ved hentning af auktion");
+                _logger.LogError(ex, "Error fetching auction details");
                 HasError = true;
                 ErrorMessage = "Der opstod en fejl ved hentning af auktionsdata";
-                return Page();
             }
+            
+            return Page();
         }
     }
 }

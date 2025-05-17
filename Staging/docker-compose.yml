@@ -11,12 +11,35 @@ services:
       - AuctionDatabase=auctions
       - AuctionCollection=list
       - GatewayUrl=http://gateway:4000
+      - ImagePath=/srv/resources/images
     expose:
       - "8080"
     depends_on:
       - mongodb
     volumes:
       - auction-images-volume:/srv/resources/images
+    networks:
+      - auctionnet
+
+  effect-svc:
+    image: effect-svc:latest
+    hostname: effect-svc01
+    build:
+      context: ../../effect-service/effectServiceAPI
+      dockerfile: Dockerfile
+    environment:
+      - EffectImagePath=/srv/resources/effect-images
+      - MongoConnectionString=mongodb://root:rootpassword@mongodb:27017/?authSource=admin
+      - EffectDatabase=effects
+      - EffectCollection=list
+      - GatewayUrl=http://gateway:4000
+      - ImagePath=/srv/resources/effect-images
+    expose:
+      - "8080"
+    depends_on:
+      - mongodb
+    volumes:
+      - effect-images-volume:/srv/resources/effect-images
     networks:
       - auctionnet
 
@@ -28,6 +51,7 @@ services:
       - ./www:/srv/www/data
     depends_on:
       - auction-svc
+      - effect-svc
     ports:
       - "4000:4000"
     networks:
@@ -52,4 +76,6 @@ networks:
 volumes:
   mongodb_data_container:
   auction-images-volume:
+    external: false
+  effect-images-volume:
     external: false

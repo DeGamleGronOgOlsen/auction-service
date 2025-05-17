@@ -4,52 +4,39 @@ using MongoDB.Driver;
 
 namespace auctionServiceAPI.Services;
 
-/// <summary>
-/// Interface definition for the DB service to access auction data.
-/// </summary>
 public interface IAuctionService
 {
-    Task<IEnumerable<Auction>?> GetAllAuctions();
-    Task<Auction?> GetAuction(Guid auctionId);
-    Task<IEnumerable<Auction>?> GetAuctionsByCategory(string category);
-    Task<Guid?> AddAuction(Auction auction);
-    Task<long> AddEffectToAuction(Guid auctionId, Effect effect);
+    Task<IEnumerable<Auction>> GetAllAuctionsAsync();
+    Task<Auction> GetAuctionAsync(Guid id);
+    Task<Guid> CreateAuctionAsync(Auction auction);
+    Task<bool> UpdateAuctionAsync(Auction auction);
+    Task<bool> DeleteAuctionAsync(Guid id);
 }
 
-/// <summary>
-/// MongoDB repository service for auctions.
-/// </summary>
 public class AuctionMongoDBService : IAuctionService
 {
     private readonly ILogger<AuctionMongoDBService> _logger;
     private readonly IMongoCollection<Auction> _collection;
 
-    /// <summary>
-    /// Creates a new instance of the AuctionMongoDBService.
-    /// </summary>
-    /// <param name="logger">The logger instance.</param>
-    /// <param name="dbcontext">The database context to be used for accessing data.</param>
     public AuctionMongoDBService(ILogger<AuctionMongoDBService> logger, MongoDBContext dbcontext)
     {
         _logger = logger;
         _collection = dbcontext.Collection;
     }
-   
-    public async Task<IEnumerable<Auction>?> GetAllAuctions()
+
+    public async Task<IEnumerable<Auction>> GetAllAuctionsAsync()
     {
         _logger.LogInformation("Getting all auctions from database");
         var filter = Builders<Auction>.Filter.Empty;
 
         try
         {
-            // Log database and collection names
             _logger.LogInformation($"Database: {_collection.Database.DatabaseNamespace.DatabaseName}");
             _logger.LogInformation($"Collection: {_collection.CollectionNamespace.CollectionName}");
-        
-            // Count documents before retrieving
+
             var count = await _collection.CountDocumentsAsync(filter);
             _logger.LogInformation($"Found {count} documents in collection");
-        
+
             var auctions = await _collection.Find(filter).ToListAsync();
             _logger.LogInformation($"Retrieved {auctions.Count} auctions");
             return auctions;
@@ -57,95 +44,76 @@ public class AuctionMongoDBService : IAuctionService
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to retrieve auctions");
-            return new List<Auction>(); // Return empty list instead of null
+            return new List<Auction>();
         }
     }
 
-    /// <summary>
-    /// Retrieves an auction by its unique ID.
-    /// </summary>
-    /// <param name="auctionId">The auction's unique ID.</param>
-    /// <returns>The requested auction.</returns>
-    public async Task<Auction?> GetAuction(Guid auctionId)
+    public async Task<Auction> GetAuctionAsync(Guid id)
     {
-        Auction? auction = null;
-        var filter = Builders<Auction>.Filter.Eq(x => x.AuctionId, auctionId);
+        var filter = Builders<Auction>.Filter.Eq(x => x.AuctionId, id);
 
         try
         {
-            auction = await _collection.Find(filter).SingleOrDefaultAsync();
+            return await _collection.Find(filter).SingleOrDefaultAsync();
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, ex.Message);
+            _logger.LogError(ex, $"Failed to retrieve auction with ID {id}: {ex.Message}");
+            return null;
         }
-
-        return auction;
     }
 
-    /// <summary>
-    /// Retrieves auctions by category.
-    /// </summary>
-    /// <param name="category">The category name.</param>
-    /// <returns>A list of auctions in the specified category.</returns>
-    public async Task<IEnumerable<Auction>?> GetAuctionsByCategory(string category)
+    public async Task<Guid> CreateAuctionAsync(Auction auction)
     {
-        IEnumerable<Auction>? auctions = null;
-
         try
         {
-            if (Enum.TryParse(category, out AuctionCategory parsedCategory))
+            if (auction.AuctionId == Guid.Empty)
             {
-                var filter = Builders<Auction>.Filter.Eq(x => x.Category, parsedCategory);
-                auctions = await _collection.Find(filter).ToListAsync();
+                auction.AuctionId = Guid.NewGuid();
             }
-            else
-            {
-                _logger.LogWarning($"Invalid category: {category}");
-            }
+            
+            await _collection.InsertOneAsync(auction);
+            _logger.LogInformation($"Created auction with ID {auction.AuctionId}");
+            return auction.AuctionId;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, ex.Message);
+            _logger.LogError(ex, $"Failed to create auction: {ex.Message}");
+            return Guid.Empty;
         }
-
-        return auctions;
     }
 
-    /// <summary>
-    /// Adds a new auction to the database.
-    /// </summary>
-    /// <param name="auction">The auction to add.</param>
-    /// <returns>The ID of the added auction.</returns>
-    public async Task<Guid?> AddAuction(Auction auction)
+    public async Task<bool> UpdateAuctionAsync(Auction auction)
     {
-        auction.AuctionId = Guid.NewGuid();
-        await _collection.InsertOneAsync(auction);
-        return auction.AuctionId;
-    }
+        var filter = Builders<Auction>.Filter.Eq(x => x.AuctionId, auction.AuctionId);
 
-    /// <summary>
-    /// Adds an effect to an auction.
-    /// </summary>
-    /// <param name="auctionId">The ID of the auction to update.</param>
-    /// <param name="effect">The effect to add to the auction.</param>
-    /// <returns>The number of documents modified.</returns>
-    public async Task<long> AddEffectToAuction(Guid auctionId, Effect effect)
-    {
-        var filter = Builders<Auction>.Filter.Eq(x => x.AuctionId, auctionId);
-        var update = Builders<Auction>.Update.Push(x => x.Effects, effect);
-
-        UpdateResult result;
         try
         {
-            result = await _collection.UpdateOneAsync(filter, update);
+            var result = await _collection.ReplaceOneAsync(filter, auction);
+            _logger.LogInformation($"Updated auction with ID {auction.AuctionId}. Modified: {result.ModifiedCount}");
+            return result.ModifiedCount > 0;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, ex.Message);
-            return 0;
+            _logger.LogError(ex, $"Failed to update auction with ID {auction.AuctionId}: {ex.Message}");
+            return false;
         }
+    }
 
-        return result.ModifiedCount;
+    public async Task<bool> DeleteAuctionAsync(Guid id)
+    {
+        var filter = Builders<Auction>.Filter.Eq(x => x.AuctionId, id);
+
+        try
+        {
+            var result = await _collection.DeleteOneAsync(filter);
+            _logger.LogInformation($"Deleted auction with ID {id}. Deleted: {result.DeletedCount}");
+            return result.DeletedCount > 0;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, $"Failed to delete auction with ID {id}: {ex.Message}");
+            return false;
+        }
     }
 }

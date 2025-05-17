@@ -30,7 +30,7 @@ namespace auctionServiceAPI.Pages.UpcomingAuctions
             try
             {
                 using HttpClient client = _clientFactory.CreateClient("gateway");
-                UpcomingAuctions = await client.GetFromJsonAsync<List<Auction>>("auction/GetAllAuctions") 
+                UpcomingAuctions = await client.GetFromJsonAsync<List<Auction>>("auction") 
                     ?? new List<Auction>();
                 
                 // Get unique categories from auctions and add to categories list
@@ -38,6 +38,8 @@ namespace auctionServiceAPI.Pages.UpcomingAuctions
                     .Select(a => a.Category.ToString())
                     .Distinct()
                     .ToList();
+
+                
                 
                 Categories = new List<string>() { "Alle kategorier" };
                 Categories.AddRange(auctionCategories);
@@ -52,9 +54,15 @@ namespace auctionServiceAPI.Pages.UpcomingAuctions
 
                 if (!string.IsNullOrEmpty(CategoryFilter) && CategoryFilter != "Alle kategorier")
                 {
-                    if (Enum.TryParse(CategoryFilter, out AuctionCategory parsedCategory))
+                    // Use case-insensitive parsing to handle any casing differences
+                    if (Enum.TryParse<AuctionCategory>(CategoryFilter, true, out AuctionCategory parsedCategory))
                     {
                         UpcomingAuctions = UpcomingAuctions.FindAll(a => a.Category == parsedCategory);
+                    }
+                    else
+                    {
+                        // Log the failed parsing for debugging
+                        _logger.LogWarning($"Failed to parse category: {CategoryFilter}");
                     }
                 }
             }
