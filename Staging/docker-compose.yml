@@ -12,10 +12,15 @@ services:
       - AuctionCollection=list
       - GatewayUrl=http://gateway:4000
       - ImagePath=/srv/resources/images
+      - RabbitMQ__Hostname=rabbitmq
+      - RabbitMQ__Port=5672
+      - RabbitMQ__Username=guest
+      - RabbitMQ__Password=guest
     expose:
       - "8080"
     depends_on:
       - mongodb
+      - rabbitmq
     volumes:
       - auction-images-volume:/srv/resources/images
     networks:
@@ -42,6 +47,23 @@ services:
       - effect-images-volume:/srv/resources/effect-images
     networks:
       - auctionnet
+    
+  bidding-svc:
+    build:
+      context: ../../BiddingService/biddingServiceAPI
+      dockerfile: Dockerfile
+    expose:
+      - "8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - RabbitMQ__Hostname=rabbitmq
+      - RabbitMQ__Port=5672
+      - RabbitMQ__Username=guest
+      - RabbitMQ__Password=guest
+    depends_on:
+      - rabbitmq  
+    networks:
+      - auctionnet
 
   nginx:
     image: nginx:latest
@@ -66,6 +88,26 @@ services:
       - 27017:27017
     volumes:
       - mongodb_data_container:/data/db
+    networks:
+      - auctionnet
+  
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: rabbitmq
+    ports:
+      - "5672:5672"     # AMQP (backend)
+      - "15672:15672"   # Web UI
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    networks:
+      - auctionnet
+  
+  redis:
+    image: redis:alpine
+    container_name: redis
+    ports:
+      - "6379:6379"
     networks:
       - auctionnet
 

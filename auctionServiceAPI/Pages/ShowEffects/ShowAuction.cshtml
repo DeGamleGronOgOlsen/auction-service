@@ -125,24 +125,88 @@ document.addEventListener('DOMContentLoaded', function() {
         bidMessage.innerHTML = '<div class="loading">Sender dit bud...</div>';
         
         try {
-            const response = await fetch('/api/bid', {
+            const response = await fetch('/bid/placebid', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
                     auctionId: auctionId,
-                    amount: amount
+                    amount: amount,
+                    userId: "4fa85f64-5717-4562-b3fc-2c963f66afa7"
                 })
             });
             
             const result = await response.json();
-            
+
             if (response.ok) {
+                const bidAmount = result.amount;
+
+                // Format the amount in Danish currency format (kr)
+                const formattedAmount = new Intl.NumberFormat('da-DK', {
+                    style: 'currency',
+                    currency: 'DKK',
+                    minimumFractionDigits: 0,
+                    maximumFractionDigits: 0
+                }).format(bidAmount);
+
+                // Calculate new minimum bid (current + 100)
+                const newMinBid = bidAmount + 100;
+                const formattedMinBid = new Intl.NumberFormat('da-DK', {
+                    style: 'currency',
+                    currency: 'DKK',
+                    minimumFractionDigits: 0,
+                    maximumFractionDigits: 0
+                }).format(newMinBid);
+
+                // Update the displayed current bid
+                document.querySelector('.current-price .price').innerHTML = formattedAmount;
+
+                // Update minimum bid display
+                document.querySelector('.current-price .min-bid').innerHTML = `Minimumsbud: ${formattedMinBid}`;
+
+                // Update bid input to new minimum
+                document.getElementById('bidAmount').value = newMinBid;
+                document.getElementById('bidAmount').min = newMinBid;
+
                 bidMessage.innerHTML = '<div class="success">Dit bud er afgivet!</div>';
-                setTimeout(() => {
-                    window.location.reload();
-                }, 1500);
+
+                // Reload bid history from database
+                fetch(`/auction/${auctionId}`)
+                    .then(response => response.json())
+                    .then(auction => {
+                        const bidHistoryElement = document.querySelector('.bid-history');
+                        if (auction.bids && auction.bids.length > 0) {
+                            let bidsHtml = '<h3>Budhistorik</h3><ul class="bids-list">';
+
+                            // Sort bids by timestamp (newest first)
+                            auction.bids.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
+                            auction.bids.forEach(bid => {
+                                const bidDate = new Date(bid.timestamp);
+                                const formattedDate = bidDate.toLocaleDateString('da-DK') + ' ' +
+                                    bidDate.toLocaleTimeString('da-DK', {hour: '2-digit', minute:'2-digit'});
+
+                                bidsHtml += `<li>
+                        <div class="bid-amount">${new Intl.NumberFormat('da-DK', {
+                                    style: 'currency',
+                                    currency: 'DKK',
+                                    minimumFractionDigits: 0,
+                                    maximumFractionDigits: 0
+                                }).format(bid.amount)}</div>
+                        <div class="bid-time">${formattedDate}</div>
+                    </li>`;
+                            });
+
+                            bidsHtml += '</ul>';
+                            bidHistoryElement.innerHTML = bidsHtml;
+                        } else {
+                            bidHistoryElement.innerHTML = '<h3>Budhistorik</h3><p>Ingen bud endnu. Vær den første til at byde!</p>';
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error fetching bid history:', error);
+                    });
             } else {
                 bidMessage.innerHTML = `<div class="error">${result.message || 'Der opstod en fejl'}</div>`;
             }

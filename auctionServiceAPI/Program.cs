@@ -18,6 +18,8 @@ try
     builder.Services.AddControllers();
     builder.Services.AddSingleton<MongoDBContext>();
     builder.Services.AddScoped<IAuctionService, AuctionMongoDBService>();
+    builder.Services.AddHostedService<BidConsumerService>();
+    
 
     // Create globally availabel HttpClient for accesing the gateway.
     var gatewayUrl = builder.Configuration["GatewayUrl"] ?? "http://localhost:4000";
