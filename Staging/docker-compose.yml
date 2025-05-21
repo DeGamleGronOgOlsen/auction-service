@@ -5,6 +5,7 @@ services:
     build:
       context: ../auctionServiceAPI
       dockerfile: Dockerfile
+    container_name: "auction-svc"
     environment:
       - AuctionImagePath=/srv/resources/images
       - MongoConnectionString=mongodb://root:rootpassword@mongodb:27017/?authSource=admin
@@ -18,9 +19,6 @@ services:
       - RabbitMQ__Password=guest
     expose:
       - "8080"
-    depends_on:
-      - mongodb
-      - rabbitmq
     volumes:
       - auction-images-volume:/srv/resources/images
     networks:
@@ -39,10 +37,9 @@ services:
       - EffectCollection=list
       - GatewayUrl=http://gateway:4000
       - ImagePath=/srv/resources/effect-images
+    container_name: "effect-svc"
     expose:
       - "8080"
-    depends_on:
-      - mongodb
     volumes:
       - effect-images-volume:/srv/resources/effect-images
     networks:
@@ -52,6 +49,7 @@ services:
     build:
       context: ../../BiddingService/biddingServiceAPI
       dockerfile: Dockerfile
+    container_name: "bidding-svc"
     expose:
       - "8080"
     environment:
@@ -59,9 +57,7 @@ services:
       - RabbitMQ__Hostname=rabbitmq
       - RabbitMQ__Port=5672
       - RabbitMQ__Username=guest
-      - RabbitMQ__Password=guest
-    depends_on:
-      - rabbitmq  
+      - RabbitMQ__Password=guest 
     networks:
       - auctionnet
 
@@ -79,44 +75,12 @@ services:
     networks:
       - auctionnet
 
-  mongodb:
-    image: mongo:latest
-    environment:
-      MONGO_INITDB_ROOT_USERNAME: root
-      MONGO_INITDB_ROOT_PASSWORD: rootpassword
-    ports:
-      - 27017:27017
-    volumes:
-      - mongodb_data_container:/data/db
-    networks:
-      - auctionnet
-  
-  rabbitmq:
-    image: rabbitmq:3-management
-    container_name: rabbitmq
-    ports:
-      - "5672:5672"     # AMQP (backend)
-      - "15672:15672"   # Web UI
-    environment:
-      RABBITMQ_DEFAULT_USER: guest
-      RABBITMQ_DEFAULT_PASS: guest
-    networks:
-      - auctionnet
-  
-  redis:
-    image: redis:alpine
-    container_name: redis
-    ports:
-      - "6379:6379"
-    networks:
-      - auctionnet
-
 networks:
   auctionnet:
-    driver: bridge
+    name: auctionnet
+    external: true
 
 volumes:
-  mongodb_data_container:
   auction-images-volume:
     external: false
   effect-images-volume:
