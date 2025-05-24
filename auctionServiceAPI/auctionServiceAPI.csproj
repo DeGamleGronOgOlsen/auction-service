@@ -23,4 +23,9 @@
     <Folder Include="wwwroot\" />
   </ItemGroup>
 
+  <ItemGroup>
+    <_ContentIncludedByDefault Remove="Pages\ShowEffects\ShowAuction.cshtml" />
+    <_ContentIncludedByDefault Remove="Pages\UpcomingAuctions\UpcomingAuctions.cshtml" />
+  </ItemGroup>
+
 </Project>
