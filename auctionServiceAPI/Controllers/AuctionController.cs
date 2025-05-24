@@ -1,5 +1,6 @@
 ﻿using auctionServiceAPI.Model;
 using auctionServiceAPI.Services;
+using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Mvc;
 
 
@@ -49,7 +50,30 @@ namespace auctionServiceAPI.Controllers
             
             return Ok(auction);
         }
-
+        
+        [HttpGet("category/{category}")]
+        public async Task<ActionResult<IEnumerable<Auction>>> GetAuctionsByCategory(AuctionCategory category)
+        {
+            _logger.LogInformation($"Getting auctions with category {category} from {_serviceIp}");
+    
+            try
+            {
+                var auctions = await _dbService.GetAuctionsByCategoryAsync(category);
+        
+                if (auctions == null || !auctions.Any())
+                {
+                    return NotFound($"No auctions found in category: {category}");
+                }
+        
+                return Ok(auctions);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error retrieving auctions with category {category}");
+                return StatusCode(500, "An error occurred while retrieving auctions by category.");
+            }
+        }
+        
         [HttpPost]
         public async Task<ActionResult<Auction>> CreateAuction([FromForm] Auction auction, IFormFile? imageFile)
         {

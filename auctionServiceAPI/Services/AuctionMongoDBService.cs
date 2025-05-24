@@ -8,6 +8,7 @@ public interface IAuctionService
 {
     Task<IEnumerable<Auction>> GetAllAuctionsAsync();
     Task<Auction> GetAuctionAsync(Guid id);
+    Task<IEnumerable<Auction>> GetAuctionsByCategoryAsync(AuctionCategory category);
     Task<Guid> CreateAuctionAsync(Auction auction);
     Task<bool> UpdateAuctionAsync(Auction auction);
     Task<bool> DeleteAuctionAsync(Guid id);
@@ -63,6 +64,24 @@ public class AuctionMongoDBService : IAuctionService
         }
     }
 
+    public async Task<IEnumerable<Auction>> GetAuctionsByCategoryAsync(AuctionCategory category)
+    {
+        _logger.LogInformation($"Getting auctions with category {category} from database");
+        var filter = Builders<Auction>.Filter.Eq(x => x.Category, category);
+
+        try
+        {
+            var auctions = await _collection.Find(filter).ToListAsync();
+            _logger.LogInformation($"Retrieved {auctions.Count} auctions with category {category}");
+            return auctions;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, $"Failed to retrieve auctions with category {category}: {ex.Message}");
+            return new List<Auction>();
+        }
+    }
+    
     public async Task<Guid> CreateAuctionAsync(Auction auction)
     {
         try
