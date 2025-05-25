@@ -5,13 +5,15 @@ using NLog;
 using NLog.Web;
 
 // Keep the logger setup outside the try block
-var logger = NLog.LogManager.Setup().LoadConfigurationFromAppSettings()
-    .GetCurrentClassLogger();
+var logger = NLog.LogManager.Setup().LoadConfigurationFromAppSettings().GetCurrentClassLogger();
 logger.Debug("start min service");
 
 try
 {
     var builder = WebApplication.CreateBuilder(args);
+    
+    builder.Logging.ClearProviders();
+    builder.Host.UseNLog();
 
     // Add services to the container.
     builder.Services.AddRazorPages();
@@ -43,8 +45,7 @@ try
 
     builder.Services.AddEndpointsApiExplorer();
     builder.Services.AddSwaggerGen();
-    builder.Logging.ClearProviders();
-    builder.Host.UseNLog();
+    
     var app = builder.Build();
 
     // Configure the HTTP request pipeline.
