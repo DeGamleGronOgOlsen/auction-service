@@ -1,6 +1,10 @@
 name: Automated API tests using Postman CLI
 
-on: push
+on:
+  push:
+    branches:
+      - main
+      - master
 
 jobs:
   automated-api-tests:
@@ -15,14 +19,31 @@ jobs:
         with:
           node-version: '18'
 
-      - name: Install Postman CLI
+      - name: Install Docker Compose
+        run: sudo apt-get update && sudo apt-get install -y docker-compose
+
+      - name: Start Docker containers
+        run: docker-compose up -d
+
+      - name: Wait for gateway to be ready
         run: |
-          curl -o- "https://dl-cli.pstmn.io/install/linux64.sh" | sh
+          for i in {1..30}; do
+            if curl -s http://localhost:4000/health || curl -s http://localhost:4000; then
+              echo "Gateway is up!"
+              exit 0
+            else
+              echo "Waiting for gateway to start..."
+              sleep 5
+            fi
+          done
+          echo "Gateway did not start in time."
+          exit 1
+
+      - name: Install Postman CLI
+        run: curl -o- "https://dl-cli.pstmn.io/install/linux64.sh" | sh
 
       - name: Login to Postman CLI
-        env:
-          POSTMAN_API_KEY: ${{ secrets.POSTMAN_API_KEY }}
-        run: postman login --with-api-key $POSTMAN_API_KEY
+        run: postman login --with-api-key ${{ secrets.POSTMAN_API_KEY }}
 
-      - name: Run Postman Collection by UID
-        run: postman collection run 42971438-d3a33369-52e1-4750-abe9-cf1bee22bfe4
+      - name: Run Postman Collection with baseUrl
+        run: postman collection run 42971438-d3a33369-52e1-4750-abe9-cf1bee22bfe4 --env-var baseUrl=http://localhost:4000
