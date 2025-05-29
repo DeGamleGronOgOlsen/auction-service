@@ -25,6 +25,4 @@ jobs:
         run: postman login --with-api-key $POSTMAN_API_KEY
 
       - name: Run Postman Collection by UID
-        env:
-          POSTMAN_API_KEY: ${{ secrets.POSTMAN_API_KEY }}
-        run: postman collection run 42971438-d3a33369-52e1-4750-abe9-cf1bee22bfe4 --api-key $POSTMAN_API_KEY
+        run: postman collection run 42971438-d3a33369-52e1-4750-abe9-cf1bee22bfe4
