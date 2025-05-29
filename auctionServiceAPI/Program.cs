@@ -80,10 +80,10 @@ try
     Secret<SecretData> connectionParamsSecret = await vaultClient.V1.Secrets.KeyValue.V2.ReadSecretAsync(
         path: "Connections",
         mountPoint: "secret"
-    );
-    string? mongoConnectionString = connectionParamsSecret.Data.Data["mongoConnectionString"]?.ToString();
+    );    string? mongoConnectionString = connectionParamsSecret.Data.Data["mongoConnectionString"]?.ToString();
     string? mongoDbName = connectionParamsSecret.Data.Data["MongoDbDatabaseName"]?.ToString();
     string? authServiceUrl = connectionParamsSecret.Data.Data["AuthServiceUrl"]?.ToString();
+    string? imagePath = connectionParamsSecret.Data.Data["ImagePath"]?.ToString();
 
     if (string.IsNullOrEmpty(mongoConnectionString))
         throw new InvalidOperationException("mongoConnectionString not found in Vault at secret/Connections.");
@@ -91,11 +91,14 @@ try
         throw new InvalidOperationException("MongoDbDatabaseName not found in Vault at secret/Connections.");
     if (string.IsNullOrEmpty(authServiceUrl))
         throw new InvalidOperationException("AuthServiceUrl not found in Vault at secret/Connections.");
+    if (string.IsNullOrEmpty(imagePath))
+        throw new InvalidOperationException("ImagePath not found in Vault at secret/Connections.");
 
     builder.Configuration["MongoDb:ConnectionString"] = mongoConnectionString;
     builder.Configuration["MongoDb:DatabaseName"] = mongoDbName;
     builder.Configuration["AuthServiceUrl"] = authServiceUrl;
-    logger.LogInformation("AuctionService: Connection parameters (MongoDB, AuthServiceUrl) loaded from Vault.");
+    builder.Configuration["ImagePath"] = imagePath;
+    logger.LogInformation("AuctionService: Connection parameters (MongoDB, AuthServiceUrl, ImagePath) loaded from Vault.");
 
 }
 catch (Exception ex)
@@ -165,12 +168,9 @@ builder.Services.AddAuthorization();
     }
 
     // CORS middleware must be early in the pipeline
-    app.UseCors("AllowFrontend");
+    app.UseCors("AllowFrontend");    app.UseStaticFiles();
 
-    app.UseStaticFiles();
-
-    var imagePath = builder.Configuration["ImagePath"];
-    var fileProvider = new PhysicalFileProvider(Path.GetFullPath(imagePath));
+    var fileProvider = new PhysicalFileProvider(Path.GetFullPath(builder.Configuration["ImagePath"]!));
     var requestPath = new PathString("/images");
     app.UseStaticFiles(new StaticFileOptions()
     {
