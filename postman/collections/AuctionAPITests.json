@@ -1,0 +1,150 @@
+{
+	"info": {
+		"_postman_id": "c7f3bda1-ceed-4e0b-9da1-8be9033040b0",
+		"name": "AuctionAPITests",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_uid": "42971438-c7f3bda1-ceed-4e0b-9da1-8be9033040b0"
+	},
+	"item": [
+		{
+			"name": "Auction",
+			"item": [
+				{
+					"name": "GetAll",
+					"id": "cdfd9ad8-5614-470c-893e-9927a00de11b",
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "/auction/GetAllAuctions",
+							"path": [
+								"auction",
+								"GetAllAuctions"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "GetAuctionById",
+					"id": "833e5639-7381-4cee-bf70-fd142a9f94ee",
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "/auction/{id}",
+							"path": [
+								"auction",
+								"{id}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "GetAuctionsByCategory",
+					"id": "74f7b4d6-b7a5-4f62-b9d2-460015499d34",
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "/auction/category/{category}",
+							"path": [
+								"auction",
+								"category",
+								"{category}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "CreateNewAuction",
+					"id": "2b69a53c-8459-4e27-839a-6da13225680a",
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "/auction",
+							"path": [
+								"auction"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "DeleteAuction",
+					"id": "9c9e3cde-d17a-4565-aa13-9061f3b1e9e2",
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"method": "PUT",
+						"header": [],
+						"url": {
+							"raw": "/auction/{id}",
+							"path": [
+								"auction",
+								"{id}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "AddBidToAuction",
+					"id": "c7616914-c124-4be1-a31a-4e26e013eb2a",
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "/auction/{id}/bid",
+							"path": [
+								"auction",
+								"{id}",
+								"bid"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "UpdateAuction",
+					"id": "f712c5e9-2e15-4359-be28-4f404a3c6ea1",
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"method": "PUT",
+						"header": [],
+						"url": {
+							"raw": "/auction/{id}",
+							"path": [
+								"auction",
+								"{id}"
+							]
+						}
+					},
+					"response": []
+				}
+			],
+			"id": "6c32ca0e-4ae0-4be4-a5e6-131006c8ecbb"
+		}
+	]
+}
