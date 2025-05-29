@@ -19,26 +19,6 @@ jobs:
         with:
           node-version: '18'
 
-      - name: Install Docker Compose
-        run: sudo apt-get update && sudo apt-get install -y docker-compose
-
-      - name: Start Docker containers
-        run: docker-compose up -d
-
-      - name: Wait for gateway to be ready
-        run: |
-          for i in {1..30}; do
-            if curl -s http://localhost:4000/health || curl -s http://localhost:4000; then
-              echo "Gateway is up!"
-              exit 0
-            else
-              echo "Waiting for gateway to start..."
-              sleep 5
-            fi
-          done
-          echo "Gateway did not start in time."
-          exit 1
-
       - name: Install Postman CLI
         run: curl -o- "https://dl-cli.pstmn.io/install/linux64.sh" | sh
 
