@@ -7,8 +7,12 @@
   </PropertyGroup>
 
   <ItemGroup>
+
+    <PackageReference Include="Mongo2Go" Version="4.1.0" />
+
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.16" />
     <PackageReference Include="Microsoft.IdentityModel.Tokens" Version="8.10.0" />
+
     <PackageReference Include="MongoDB.Bson" Version="3.4.0" />
     <PackageReference Include="MongoDB.Driver" Version="3.4.0" />
     <PackageReference Include="NLog" Version="5.4.0" />
