@@ -1,5 +1,7 @@
 ﻿using auctionServiceAPI.Model;
 using auctionServiceAPI.Services;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Mvc;
 
 
@@ -26,15 +28,16 @@ namespace auctionServiceAPI.Controllers
             _serviceIp = ips.First().MapToIPv4().ToString();
             _logger.LogInformation(1, $"Auction Service responding from {_serviceIp}");
         }
-
-        [HttpGet]
+        
+        [AllowAnonymous]
+        [HttpGet("GetAllAuctions")]
         public async Task<ActionResult<IEnumerable<Auction>>> GetAllAuctions()
         {
             _logger.LogInformation($"Getting all auctions from {_serviceIp}");
             var auctions = await _dbService.GetAllAuctionsAsync();
             return Ok(auctions);
         }
-
+        [AllowAnonymous]
         [HttpGet("{id}")]
         public async Task<ActionResult<Auction>> GetAuction(Guid id)
         {
@@ -49,7 +52,30 @@ namespace auctionServiceAPI.Controllers
             
             return Ok(auction);
         }
-
+        [AllowAnonymous]
+        [HttpGet("category/{category}")]
+        public async Task<ActionResult<IEnumerable<Auction>>> GetAuctionsByCategory(AuctionCategory category)
+        {
+            _logger.LogInformation($"Getting auctions with category {category} from {_serviceIp}");
+    
+            try
+            {
+                var auctions = await _dbService.GetAuctionsByCategoryAsync(category);
+        
+                if (auctions == null || !auctions.Any())
+                {
+                    return NotFound($"No auctions found in category: {category}");
+                }
+        
+                return Ok(auctions);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error retrieving auctions with category {category}");
+                return StatusCode(500, "An error occurred while retrieving auctions by category.");
+            }
+        }
+        [Authorize(Roles = "admin")]
         [HttpPost]
         public async Task<ActionResult<Auction>> CreateAuction([FromForm] Auction auction, IFormFile? imageFile)
         {
@@ -109,7 +135,7 @@ namespace auctionServiceAPI.Controllers
                 return StatusCode(500, "An error occurred while creating the auction.");
             }
         }
-
+        [Authorize(Roles = "admin")]
         [HttpPut("{id}")]
         public async Task<IActionResult> UpdateAuction(Guid id, Auction auction)
         {
@@ -129,7 +155,7 @@ namespace auctionServiceAPI.Controllers
             await _dbService.UpdateAuctionAsync(auction);
             return NoContent();
         }
-
+        [Authorize(Roles = "admin")]
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteAuction(Guid id)
         {
@@ -144,7 +170,7 @@ namespace auctionServiceAPI.Controllers
             await _dbService.DeleteAuctionAsync(id);
             return NoContent();
         }
-
+        [Authorize(Roles = "admin, customer")]
         [HttpPost("{id}/bid")]
         public async Task<IActionResult> AddBid(Guid id, Bid bid)
         {
